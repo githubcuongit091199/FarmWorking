@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lá Farm · Quản lý nông trại</title>
+    <base href="/" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css?v=15" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="FarmWorking.Web.styles.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/farm-map.js"></script>
+    <script>
+        // Backdrop clicks are intentionally swallowed for every dialog. Closing
+        // is explicit through the X (or an action button inside the dialog).
+        window.addEventListener("click", function (event) {
+            if (event.target instanceof Element && event.target.classList.contains("modal-backdrop")) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

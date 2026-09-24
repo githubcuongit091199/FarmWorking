@@ -1,0 +1,146 @@
+{
+  "farms": [
+    {
+      "id": "fd3e64ff-d52e-4f5e-987d-f67c24047206",
+      "name": "V\u01B0\u1EDDn B\u01B0\u1EDFi An Nhi\u00EAn",
+      "location": "B\u1EBFn Tre",
+      "area": 2.4,
+      "areaUnit": "ha",
+      "crop": "B\u01B0\u1EDFi da xanh",
+      "description": "Khu v\u01B0\u1EDDn canh t\u00E1c theo h\u01B0\u1EDBng h\u1EEFu c\u01A1, 320 g\u1ED1c b\u01B0\u1EDFi.",
+      "createdAt": "2026-08-10T14:27:32.068489Z"
+    },
+    {
+      "id": "a14ba828-24c7-4d46-95c7-3aebc2757d5a",
+      "name": "Trang tr\u1EA1i Rau M\u1ED9c",
+      "location": "\u0110\u00E0 L\u1EA1t, L\u00E2m \u0110\u1ED3ng",
+      "area": 1.2,
+      "areaUnit": "ha",
+      "crop": "Rau \u0103n l\u00E1",
+      "description": "Nh\u00E0 m\u00E0ng v\u00E0 6 lu\u1ED1ng rau lu\u00E2n canh.",
+      "createdAt": "2026-08-10T14:27:32.0686204Z"
+    }
+  ],
+  "notes": [
+    {
+      "id": "a87a2ba8-817d-4c82-bbd3-05436fdeabca",
+      "farmId": "fd3e64ff-d52e-4f5e-987d-f67c24047206",
+      "workDate": "2026-08-09T00:00:00+07:00",
+      "title": "T\u1EC9a c\u00E0nh v\u00E0 ki\u1EC3m tra s\u00E2u",
+      "content": "T\u1EC9a c\u00E0nh v\u01B0\u1EE3t, ph\u00E1t hi\u1EC7n nh\u1EB9 s\u00E2u v\u1EBD b\u00F9a t\u1EA1i khu B.",
+      "worker": "Anh Minh"
+    },
+    {
+      "id": "281bbc3f-f9f0-4af9-be36-b3334816ee91",
+      "farmId": "a14ba828-24c7-4d46-95c7-3aebc2757d5a",
+      "workDate": "2026-08-08T00:00:00+07:00",
+      "title": "Gieo l\u1EE9a c\u1EA3i m\u1EDBi",
+      "content": "\u0110\u00E3 gieo 4 khay, t\u1EF7 l\u1EC7 n\u1EA3y m\u1EA7m d\u1EF1 ki\u1EBFn 90%.",
+      "worker": "Ch\u1ECB Lan"
+    }
+  ],
+  "tags": [
+    {
+      "id": "b4a6c75f-ee27-43d0-9a32-97f761ccf048",
+      "name": "B\u00E1n n\u00F4ng s\u1EA3n",
+      "type": 0
+    },
+    {
+      "id": "60555320-224a-487f-b007-dce6ba07f0ee",
+      "name": "Ph\u00E2n b\u00F3n",
+      "type": 1
+    },
+    {
+      "id": "9aa36834-3536-4115-8b8f-db90395c53ff",
+      "name": "Nh\u00E2n c\u00F4ng",
+      "type": 1
+    }
+  ],
+  "transactions": [
+    {
+      "id": "8823a517-ed24-4517-86ba-be2c7a45a2c4",
+      "farmId": "fd3e64ff-d52e-4f5e-987d-f67c24047206",
+      "type": 0,
+      "amount": 18500000,
+      "transactionDate": "2026-08-07T00:00:00+07:00",
+      "tag": "B\u00E1n n\u00F4ng s\u1EA3n",
+      "description": "B\u00E1n b\u01B0\u1EDFi \u0111\u1EE3t 1"
+    },
+    {
+      "id": "5470f816-9670-4b36-84dd-9e1ca0d26acd",
+      "farmId": "fd3e64ff-d52e-4f5e-987d-f67c24047206",
+      "type": 1,
+      "amount": 2400000,
+      "transactionDate": "2026-08-05T00:00:00+07:00",
+      "tag": "Nh\u00E2n c\u00F4ng",
+      "description": "C\u00F4ng ch\u0103m s\u00F3c tu\u1EA7n 1"
+    },
+    {
+      "id": "edd621c1-7f15-425f-884a-cef3fd473bb2",
+      "farmId": "a14ba828-24c7-4d46-95c7-3aebc2757d5a",
+      "type": 1,
+      "amount": 1350000,
+      "transactionDate": "2026-08-09T00:00:00+07:00",
+      "tag": "Ph\u00E2n b\u00F3n",
+      "description": "Dinh d\u01B0\u1EE1ng cho rau"
+    }
+  ],
+  "processes": [
+    {
+      "id": "6ef4520f-b908-4cdc-aad5-311674e7723a",
+      "name": "Quy tr\u00ECnh ch\u0103m s\u00F3c b\u01B0\u1EDFi sau thu ho\u1EA1ch",
+      "cropType": "B\u01B0\u1EDFi da xanh",
+      "farmId": "fd3e64ff-d52e-4f5e-987d-f67c24047206",
+      "description": "Ph\u1EE5c h\u1ED3i c\u00E2y v\u00E0 chu\u1EA9n b\u1ECB v\u1EE5 m\u1EDBi",
+      "steps": [
+        {
+          "id": "dd2190ca-192d-48a2-948b-cb407e2366ad",
+          "order": 1,
+          "title": "V\u1EC7 sinh v\u01B0\u1EDDn",
+          "description": "Thu gom tr\u00E1i r\u1EE5ng, c\u00E0nh b\u1EC7nh",
+          "dayOffset": 0
+        },
+        {
+          "id": "d34d26a4-11af-4960-9e42-f0d221570762",
+          "order": 2,
+          "title": "B\u00F3n ph\u1EE5c h\u1ED3i",
+          "description": "B\u00F3n h\u1EEFu c\u01A1 hoai m\u1EE5c quanh t\u00E1n",
+          "dayOffset": 7
+        },
+        {
+          "id": "a982ff5e-a655-4789-8715-8c01e21a2f74",
+          "order": 3,
+          "title": "T\u1EC9a c\u00E0nh",
+          "description": "Lo\u1EA1i c\u00E0nh s\u00E2u b\u1EC7nh v\u00E0 c\u00E0nh v\u01B0\u1EE3t",
+          "dayOffset": 14
+        }
+      ]
+    }
+  ],
+  "supplies": [
+    {
+      "id": "523047da-e6b3-4997-8771-f90425f57ea9",
+      "type": 0,
+      "name": "Ph\u00E2n h\u1EEFu c\u01A1 vi sinh",
+      "brand": "Green Farm",
+      "quantity": 85,
+      "unit": "kg",
+      "minimumStock": 30,
+      "expiryDate": "2027-06-10T00:00:00+07:00",
+      "usage": "B\u00F3n g\u1ED1c",
+      "notes": ""
+    },
+    {
+      "id": "c4d64689-0cd4-4c4c-bbeb-be971adfdfe8",
+      "type": 1,
+      "name": "D\u1EA7u kho\u00E1ng sinh h\u1ECDc",
+      "brand": "BioCare",
+      "quantity": 4,
+      "unit": "l\u00EDt",
+      "minimumStock": 5,
+      "expiryDate": "2027-02-10T00:00:00+07:00",
+      "usage": "Ph\u00F2ng r\u1EC7p s\u00E1p",
+      "notes": ""
+    }
+  ]
+}

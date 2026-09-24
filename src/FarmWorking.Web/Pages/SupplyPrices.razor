@@ -1,0 +1,13 @@
+@page "/supply-prices"
+@inject FarmApi Api
+<PageTitle>Bộ giá vật tư · Lá Farm</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">DANH MỤC DÙNG CHUNG</span><h1>Bộ giá vật tư</h1><p>Mỗi Phân/Thuốc có danh sách mức giá để chọn khi nhập vào kho nông trại.</p></div></div>
+<div class="inventory-grid">@foreach(var supply in supplies){<article class="inventory-card price-card"><div class="inventory-icon">@(supply.Type==SupplyType.Fertilizer?"◇":"⌁")</div><div class="grow"><span class="eyebrow">@(supply.Type==SupplyType.Fertilizer?"PHÂN BÓN":"THUỐC") · @supply.Unit</span><h2>@supply.Name</h2><div class="price-list">@if(!prices.GetValueOrDefault(supply.Id,[]).Any()){<small>Chưa có mức giá.</small>}@foreach(var price in prices.GetValueOrDefault(supply.Id,[])){<span><strong>@Money(price.Price)</strong><button title="Xóa mức giá" @onclick="()=>Remove(price)">×</button></span>}</div><div class="add-price"><input type="number" min="0" step="0.01" placeholder="Nhập giá mới" value="@drafts.GetValueOrDefault(supply.Id)" @onchange="e=>SetDraft(supply.Id,e.Value?.ToString())"/><button class="btn primary small" @onclick="()=>Add(supply.Id)">+ Thêm giá</button></div></div></article>}</div>
+@code{
+ List<Supply> supplies=[];Dictionary<Guid,List<SupplyPrice>> prices=[];Dictionary<Guid,decimal> drafts=[];
+ protected override async Task OnInitializedAsync(){supplies=await Api.Supplies();foreach(var x in supplies)prices[x.Id]=await Api.SupplyPrices(x.Id);}
+ void SetDraft(Guid id,string? value){if(decimal.TryParse(value,out var price))drafts[id]=price;}
+ async Task Add(Guid id){if(!drafts.TryGetValue(id,out var price)||price<0)return;await Api.AddSupplyPrice(id,price);prices[id]=await Api.SupplyPrices(id);drafts.Remove(id);}
+ async Task Remove(SupplyPrice price){try{await Api.DeleteSupplyPrice(price.Id);prices[price.SupplyId]=await Api.SupplyPrices(price.SupplyId);}catch(HttpRequestException){}}
+ static string Money(decimal value)=>value.ToString("N2",new CultureInfo("vi-VN"))+" đ";
+}

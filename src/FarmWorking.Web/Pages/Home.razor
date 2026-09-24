@@ -1,0 +1,21 @@
+@page "/"
+@inject FarmApi Api
+<PageTitle>Tổng quan · Lá Farm</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">KHÔNG GIAN LÀM VIỆC</span><h1>Chào buổi sáng! 🌿</h1><p>Tình hình nông trại của bạn hôm nay.</p></div><a class="btn primary" href="farms">+ Thêm nông trại</a></div>
+@if (data is null) { <div class="loading">Đang tải dữ liệu...</div> }
+else
+{
+    <div class="stats-grid">
+        <div class="stat-card green"><div class="stat-icon">♧</div><div><span>Nông trại</span><strong>@data.FarmCount</strong><small>Đang hoạt động</small></div></div>
+        <div class="stat-card"><div class="stat-icon">⌗</div><div><span>Tổng diện tích</span><strong>@data.TotalArea.ToString("0.#") ha</strong><small>Đất canh tác</small></div></div>
+        <div class="stat-card"><div class="stat-icon income">↗</div><div><span>Thu nhập</span><strong>@Money(data.Income)</strong><small>Toàn thời gian</small></div></div>
+        <div class="stat-card"><div class="stat-icon expense">↘</div><div><span>Chi phí</span><strong>@Money(data.Expense)</strong><small>Còn lại: @Money(data.Income-data.Expense)</small></div></div>
+    </div>
+    <div class="dashboard-grid">
+        <section class="panel"><div class="panel-head"><div><h2>Thu chi gần đây</h2><p>Các giao dịch mới nhất</p></div><a href="transactions">Xem tất cả →</a></div>
+            <div class="transaction-list">@foreach (var t in data.RecentTransactions) { <div class="transaction-row"><div class="transaction-symbol @(t.Type == TransactionType.Income ? "up" : "down")">@(t.Type == TransactionType.Income ? "↗" : "↘")</div><div class="grow"><strong>@t.Description</strong><small>@t.Tag · @t.TransactionDate.ToString("dd/MM/yyyy")</small></div><strong class="@(t.Type == TransactionType.Income ? "money-in" : "money-out")">@(t.Type == TransactionType.Income ? "+" : "-")@Money(t.Amount)</strong></div> }</div>
+        </section>
+        <aside class="panel quick"><div class="panel-head"><div><h2>Cần chú ý</h2><p>Nhắc việc hôm nay</p></div></div><div class="attention @(data.LowStockCount > 0 ? "warning" : "ok")"><span>!</span><div><strong>@data.LowStockCount vật tư sắp hết</strong><small>Kiểm tra tồn kho và bổ sung</small></div></div><a class="quick-link" href="supplies/fertilizer">Quản lý kho vật tư <span>→</span></a><a class="quick-link" href="processes">Xem quy trình canh tác <span>→</span></a></aside>
+    </div>
+}
+@code { DashboardSummary? data; protected override async Task OnInitializedAsync() => data = await Api.Dashboard(); static string Money(decimal value) => value.ToString("N0", new CultureInfo("vi-VN")) + " ₫"; }

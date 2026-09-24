@@ -1,0 +1,27 @@
+@page "/knowledge"
+@inject FarmApi Api
+@inject IJSRuntime JS
+<PageTitle>Kho kinh nghiệm · Lá Farm</PageTitle>
+
+<div class="page-heading"><div><span class="eyebrow">THƯ VIỆN</span><h1>Kho kinh nghiệm</h1><p>Lưu hình ảnh, tài liệu và kiến thức theo thư mục riêng.</p></div><div class="knowledge-heading-actions"><label class="btn ghost upload-label">↑ Tải tệp<InputFile OnChange="Upload" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" /></label><button class="btn primary" @onclick="()=>showFolder=true">+ Thư mục mới</button></div></div>
+
+<nav class="breadcrumbs"><button @onclick="GoRoot">Kho kinh nghiệm</button>@foreach(var folder in path){var target=folder;<span>›</span><button @onclick="()=>GoTo(target)">@folder.Name</button>}</nav>
+
+@if(uploading){<div class="upload-status">Đang tải tệp lên...</div>}
+@if(items.Count==0&&!uploading){<div class="empty knowledge-empty"><strong>Thư mục đang trống</strong><span>Tạo thư mục hoặc tải tài liệu đầu tiên lên.</span></div>}
+<div class="knowledge-grid">@foreach(var item in items){<article class="knowledge-card @(item.IsFolder?"folder":"file")" @ondblclick="()=>Open(item)"><div class="knowledge-preview">@if(item.IsFolder){<span>📁</span>}else if(IsImage(item)){<img src="@Api.KnowledgeContentUrl(item.Id)" alt="@item.Name"/>}else{<span>@FileIcon(item)</span>}</div><div class="knowledge-info"><strong title="@item.Name">@item.Name</strong><small>@(item.IsFolder?"Thư mục":$"{FormatSize(item.Size)} · {item.CreatedAt.ToLocalTime():dd/MM/yyyy}")</small></div><div class="knowledge-actions">@if(item.IsFolder){<button title="Mở" @onclick="()=>Open(item)">Mở</button>}else{<a href="@Api.KnowledgeContentUrl(item.Id)" target="_blank">Xem</a><a href="@Api.KnowledgeContentUrl(item.Id,true)">Tải</a>}<button @onclick="()=>Rename(item)">Đổi tên</button><button class="danger-link" @onclick="()=>Delete(item)">Xóa</button></div></article>}</div>
+
+@if(showFolder){<div class="modal-backdrop" @onclick="CloseFolder"><div class="modal" @onclick:stopPropagation><div class="modal-head"><h2>Tạo thư mục mới</h2><button class="icon-btn" @onclick="CloseFolder">×</button></div><EditForm Model="folderForm" OnValidSubmit="CreateFolder"><div class="form-grid"><label class="wide">Tên thư mục<input required autofocus @bind="folderForm.Name"/></label></div><div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseFolder">Đóng</button><button class="btn primary">Tạo thư mục</button></div></EditForm></div></div>}
+
+@code{
+    List<KnowledgeItem> items=[];List<KnowledgeItem> path=[];CreateKnowledgeFolderRequest folderForm=new();bool showFolder;bool uploading;Guid? CurrentFolder=>path.Count==0?null:path[^1].Id;
+    protected override async Task OnInitializedAsync()=>await Reload();async Task Reload()=>items=await Api.Knowledge(CurrentFolder);
+    async Task Open(KnowledgeItem item){if(item.IsFolder){path.Add(item);await Reload();}}
+    async Task GoRoot(){path.Clear();await Reload();}async Task GoTo(KnowledgeItem folder){var index=path.FindIndex(x=>x.Id==folder.Id);path=path.Take(index+1).ToList();await Reload();}
+    void CloseFolder(){showFolder=false;folderForm=new();}async Task CreateFolder(){await Api.CreateKnowledgeFolder(CurrentFolder,folderForm.Name);CloseFolder();await Reload();}
+    async Task Upload(InputFileChangeEventArgs e){uploading=true;try{foreach(var file in e.GetMultipleFiles(20))await Api.UploadKnowledgeFile(CurrentFolder,file);await Reload();}finally{uploading=false;}}
+    async Task Rename(KnowledgeItem item){var name=await JS.InvokeAsync<string?>("prompt","Tên mới:",item.Name);if(string.IsNullOrWhiteSpace(name)||name==item.Name)return;await Api.RenameKnowledgeItem(item.Id,name);await Reload();}
+    async Task Delete(KnowledgeItem item){var message=item.IsFolder?$"Xóa thư mục '{item.Name}' và toàn bộ nội dung bên trong?":$"Xóa tệp '{item.Name}'?";if(!await JS.InvokeAsync<bool>("confirm",message))return;await Api.DeleteKnowledgeItem(item.Id);await Reload();}
+    static bool IsImage(KnowledgeItem x)=>x.ContentType.StartsWith("image/",StringComparison.OrdinalIgnoreCase);static string FileIcon(KnowledgeItem x)=>x.Name.EndsWith(".pdf",StringComparison.OrdinalIgnoreCase)?"PDF":x.Name.EndsWith(".doc",StringComparison.OrdinalIgnoreCase)||x.Name.EndsWith(".docx",StringComparison.OrdinalIgnoreCase)?"DOC":x.Name.EndsWith(".xls",StringComparison.OrdinalIgnoreCase)||x.Name.EndsWith(".xlsx",StringComparison.OrdinalIgnoreCase)?"XLS":"TXT";
+    static string FormatSize(long bytes)=>bytes<1024?$"{bytes} B":bytes<1024*1024?$"{bytes/1024d:N1} KB":$"{bytes/1024d/1024d:N1} MB";
+}

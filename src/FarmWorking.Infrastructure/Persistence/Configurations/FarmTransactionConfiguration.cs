@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class FarmTransactionConfiguration:IEntityTypeConfiguration<FarmTransaction>{public void Configure(EntityTypeBuilder<FarmTransaction>b){b.ToTable("FarmTransactions");b.HasKey(x=>x.Id);b.Property(x=>x.Amount).HasPrecision(18,2);b.Property(x=>x.Tag).HasMaxLength(100).IsRequired();b.Property(x=>x.Description).HasMaxLength(1000);b.HasOne(x=>x.Farm).WithMany(x=>x.Transactions).HasForeignKey(x=>x.FarmId).OnDelete(DeleteBehavior.Cascade);b.HasIndex(x=>new{x.FarmId,x.TransactionDate});}}

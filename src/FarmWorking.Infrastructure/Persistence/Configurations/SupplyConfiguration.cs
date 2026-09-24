@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class SupplyConfiguration:IEntityTypeConfiguration<Supply>{public void Configure(EntityTypeBuilder<Supply>b){b.ToTable("Supplies");b.HasKey(x=>x.Id);b.Property(x=>x.Name).HasMaxLength(200).IsRequired();b.Property(x=>x.Brand).HasMaxLength(150);b.Property(x=>x.ImageUrl).HasMaxLength(2000);b.Property(x=>x.Quantity).HasPrecision(18,2);b.Property(x=>x.MinimumStock).HasPrecision(18,2);b.Property(x=>x.Unit).HasMaxLength(30);b.Property(x=>x.Usage).HasMaxLength(1000);b.Property(x=>x.Notes).HasMaxLength(2000);}}

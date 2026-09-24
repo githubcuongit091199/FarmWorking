@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class ProcessStepConfiguration:IEntityTypeConfiguration<ProcessStep>{public void Configure(EntityTypeBuilder<ProcessStep>b){b.ToTable("ProcessSteps");b.HasKey(x=>x.Id);b.Property(x=>x.Title).HasMaxLength(250).IsRequired();b.Property(x=>x.Description).HasMaxLength(2000);b.HasOne(x=>x.WorkProcess).WithMany(x=>x.Steps).HasForeignKey(x=>x.WorkProcessId).OnDelete(DeleteBehavior.Cascade);b.HasIndex(x=>new{x.WorkProcessId,x.Order}).IsUnique();}}

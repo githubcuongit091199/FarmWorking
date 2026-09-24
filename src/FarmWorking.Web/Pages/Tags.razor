@@ -1,0 +1,46 @@
+@page "/tags"
+@inject FarmApi Api
+<PageTitle>Quản lý tag · Lá Farm</PageTitle>
+
+<div class="page-heading">
+    <div><span class="eyebrow">TÀI CHÍNH</span><h1>Quản lý tag</h1><p>Quản lý các nhóm phân loại cho khoản thu và khoản chi.</p></div>
+    <button class="btn primary" @onclick="OpenCreate">+ Thêm tag</button>
+</div>
+
+<div class="finance-summary">
+    <div><span>TỔNG TAG</span><strong>@items.Count</strong></div>
+    <div><span>TAG KHOẢN THU</span><strong class="money-in">@items.Count(x=>x.Type==TransactionType.Income)</strong></div>
+    <div><span>TAG KHOẢN CHI</span><strong class="money-out">@items.Count(x=>x.Type==TransactionType.Expense)</strong></div>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><div><h2>Danh sách tag</h2><p>@Filtered.Count() tag</p></div><select class="filter" @bind="filter"><option value="all" hidden="@(filter=="all")">Tất cả</option><option value="income">Khoản thu</option><option value="expense">Khoản chi</option></select></div>
+    <div class="tag-grid">
+        @if(!Filtered.Any()){<div class="empty">Chưa có tag phù hợp.</div>}
+        @foreach(var tag in Filtered)
+        {
+            <article class="tag-card"><div class="tag-card-head"><span class="transaction-symbol @(tag.Type==TransactionType.Income?"up":"down")">@(tag.Type==TransactionType.Income?"↗":"↘")</span><em class="tag">@(tag.Type==TransactionType.Income?"Khoản thu":"Khoản chi")</em></div><h3>@tag.Name</h3><div class="row-actions"><button class="btn small ghost" @onclick="()=>OpenEdit(tag)">Sửa</button><button class="btn small danger" @onclick="()=>Remove(tag.Id)">Xóa</button></div></article>
+        }
+    </div>
+</section>
+
+@if(showForm)
+{
+    <div class="modal-backdrop" @onclick="CloseForm"><div class="modal" @onclick:stopPropagation>
+        <div class="modal-head"><div><span class="eyebrow">@(editingId.HasValue?"CẬP NHẬT":"TAG MỚI")</span><h2>@(editingId.HasValue?"Sửa tag":"Thêm tag tài chính")</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div>
+        <EditForm Model="model" OnValidSubmit="Save">
+            <div class="type-toggle"><button type="button" class="@(model.Type==TransactionType.Income?"active income":"")" @onclick="()=>model.Type=TransactionType.Income">↗ Khoản thu</button><button type="button" class="@(model.Type==TransactionType.Expense?"active expense":"")" @onclick="()=>model.Type=TransactionType.Expense">↘ Khoản chi</button></div>
+            <div class="form-grid"><label class="wide">Tên tag<input required maxlength="100" @bind="model.Name" placeholder="VD: Bán nông sản, Phân bón..." /></label></div>
+            <div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Hủy</button><button class="btn primary">@(editingId.HasValue?"Lưu thay đổi":"Thêm tag")</button></div>
+        </EditForm>
+    </div></div>
+}
+
+@code {
+    List<FinanceTag> items=[]; FinanceTag model=new(); Guid? editingId; bool showForm; string filter="all";
+    IEnumerable<FinanceTag> Filtered=>items.Where(x=>filter=="all"||(filter=="income"&&x.Type==TransactionType.Income)||(filter=="expense"&&x.Type==TransactionType.Expense));
+    protected override async Task OnInitializedAsync()=>items=await Api.Tags();
+    void OpenCreate(){editingId=null;model=new();showForm=true;} void OpenEdit(FinanceTag tag){editingId=tag.Id;model=new(){Id=tag.Id,Name=tag.Name,Type=tag.Type};showForm=true;} void CloseForm(){showForm=false;editingId=null;model=new();}
+    async Task Save(){if(editingId.HasValue)await Api.UpdateTag(editingId.Value,model);else await Api.AddTag(model);items=await Api.Tags();CloseForm();}
+    async Task Remove(Guid id){await Api.DeleteTag(id);items=await Api.Tags();}
+}

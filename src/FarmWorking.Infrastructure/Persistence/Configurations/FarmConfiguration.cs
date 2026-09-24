@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class FarmConfiguration:IEntityTypeConfiguration<Farm>{public void Configure(EntityTypeBuilder<Farm> b){b.ToTable("Farms");b.HasKey(x=>x.Id);b.Property(x=>x.Name).HasMaxLength(200).IsRequired();b.Property(x=>x.Location).HasMaxLength(300).IsRequired();b.Property(x=>x.Latitude).HasPrecision(9,6);b.Property(x=>x.Longitude).HasPrecision(9,6);b.Property(x=>x.Area).HasPrecision(18,2);b.Property(x=>x.AreaUnit).HasMaxLength(20);b.Property(x=>x.Crop).HasMaxLength(150);b.Property(x=>x.Description).HasMaxLength(2000);}}

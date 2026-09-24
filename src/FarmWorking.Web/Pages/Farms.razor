@@ -1,0 +1,101 @@
+@page "/farms"
+@inject FarmApi Api
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Nông trại · Lá Farm</PageTitle>
+
+<div class="page-heading">
+    <div><span class="eyebrow">DANH MỤC</span><h1>Nông trại</h1><p>Quản lý các khu vực canh tác của bạn.</p></div>
+    <button class="btn primary" @onclick="ShowForm">+ Thêm nông trại</button>
+</div>
+
+<div class="farm-grid">
+    @foreach (var farm in farms)
+    {
+        <a class="farm-card" href="farms/@farm.Id">
+            <div class="farm-visual"><span>@CropIcon(farm.Crop)</span><div class="farm-status">● Đang hoạt động</div></div>
+            <div class="farm-body"><span class="crop-label">@farm.Crop</span><h2>@farm.Name</h2><p>⌖ @farm.Location</p><div class="farm-meta"><span><small>DIỆN TÍCH</small><strong>@farm.Area @farm.AreaUnit</strong></span><span><small>KHỞI TẠO</small><strong>@farm.CreatedAt.ToString("MM/yyyy")</strong></span></div></div>
+        </a>
+    }
+</div>
+
+@if (showForm)
+{
+    <div class="modal-backdrop" @onclick="CloseForm">
+        <div class="modal farm-modal" @onclick:stopPropagation>
+            <div class="modal-head"><div><span class="eyebrow">NÔNG TRẠI MỚI</span><h2>Thêm khu vực canh tác</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div>
+            <EditForm Model="model" OnValidSubmit="Save">
+                <DataAnnotationsValidator />
+                <div class="form-grid">
+                    <label class="wide">Tên nông trại<input @bind="model.Name" required placeholder="VD: Vườn bưởi An Nhiên" /></label>
+                    <label class="wide">Địa điểm<input @bind="model.Location" required placeholder="Chọn trên bản đồ hoặc nhập địa chỉ" /></label>
+                    <div class="wide map-field">
+                        <div class="map-label"><span>Chọn trên bản đồ</span><small>Bấm vào vị trí để lấy tọa độ và địa chỉ</small></div>
+                        <div id="farm-location-map"></div>
+                        @if (model.Latitude.HasValue && model.Longitude.HasValue)
+                        {
+                            <small class="coordinates">Tọa độ: @model.Latitude.Value.ToString("0.000000"), @model.Longitude.Value.ToString("0.000000")</small>
+                        }
+                    </div>
+                    <label>Loại cây trồng<input @bind="model.Crop" required placeholder="VD: Bưởi da xanh" /></label>
+                    <label>Diện tích<input type="number" step="0.1" @bind="model.Area" /></label>
+                    <label>Đơn vị<select @bind="model.AreaUnit"><option hidden="@(model.AreaUnit=="ha")">ha</option><option>m²</option><option>sào</option></select></label>
+                    <label class="wide">Mô tả<textarea @bind="model.Description" rows="3" placeholder="Thông tin ngắn về nông trại"></textarea></label>
+                </div>
+                <div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Hủy</button><button class="btn primary">Lưu nông trại</button></div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    List<Farm> farms = [];
+    Farm model = new();
+    bool showForm;
+    bool initializeMap;
+    DotNetObjectReference<Farms>? mapReference;
+
+    protected override async Task OnInitializedAsync() => farms = await Api.Farms();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!initializeMap) return;
+        initializeMap = false;
+        mapReference ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("farmMap.init", mapReference, model.Latitude, model.Longitude);
+    }
+
+    void ShowForm()
+    {
+        showForm = true;
+        initializeMap = true;
+    }
+
+    async Task CloseForm()
+    {
+        await JS.InvokeVoidAsync("farmMap.destroy");
+        showForm = false;
+    }
+
+    [JSInvokable]
+    public void SetMapLocation(double latitude, double longitude, string address)
+    {
+        model.Latitude = latitude;
+        model.Longitude = longitude;
+        model.Location = address;
+        StateHasChanged();
+    }
+
+    async Task Save()
+    {
+        await Api.AddFarm(model);
+        farms = await Api.Farms();
+        model = new();
+        await CloseForm();
+    }
+
+    static string CropIcon(string crop) => crop.Contains("rau", StringComparison.OrdinalIgnoreCase) ? "🥬" : "🌳";
+
+    public void Dispose() => mapReference?.Dispose();
+}

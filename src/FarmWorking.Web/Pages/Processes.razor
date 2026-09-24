@@ -1,0 +1,55 @@
+@page "/processes"
+@inject FarmApi Api
+@inject IJSRuntime JS
+<PageTitle>Quy trình · Lá Farm</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">CANH TÁC</span><h1>Quy trình làm việc</h1><p>Click vào quy trình để xem hoặc cập nhật thông tin.</p></div><button class="btn primary" @onclick="OpenCreate">+ Tạo quy trình</button></div>
+<div class="process-grid">
+    @foreach(var process in items)
+    {
+        <article class="process-card clickable @(process.IsDeleted?"deleted-process":"")" @onclick="()=>OpenProcess(process)">
+            @if(process.IsDeleted){<div class="deleted-slash"></div><span class="deleted-badge">ĐÃ XÓA</span>}
+            <div class="process-top"><span class="process-icon">☷</span><span class="steps-count">@process.Steps.Count bước</span></div>
+            @if(!process.IsDeleted){<button class="process-delete-button" title="Xóa quy trình" @onclick:stopPropagation @onclick="()=>Delete(process)">Xóa</button>}
+            <span class="eyebrow">@process.CropType</span><h2>@process.Name</h2><p>@process.Description</p>
+            <div class="assigned-farms"><small>NÔNG TRẠI ÁP DỤNG</small><strong>@AssignedFarmNames(process)</strong></div>
+            <div class="mini-steps">@foreach(var step in process.Steps.OrderBy(x=>x.Order).Take(3)){<div><b>@step.Order</b><span>@step.Title<small>Ngày +@step.DayOffset</small></span></div>}</div>
+            @if(!process.IsDeleted){<div class="process-actions"><span class="click-hint">Click để sửa</span></div>}
+            else{<div class="process-actions"><span class="click-hint">Click để xem chi tiết</span></div>}
+        </article>
+    }
+</div>
+
+@if(showForm)
+{
+    <div class="modal-backdrop" @onclick="CloseForm"><div class="modal large" @onclick:stopPropagation>
+        <div class="modal-head"><div><span class="eyebrow">@(viewOnly?"CHI TIẾT ĐÃ XÓA":editingId.HasValue?"CẬP NHẬT":"QUY TRÌNH MỚI")</span><h2>@(viewOnly?"Chi tiết quy trình":editingId.HasValue?"Sửa quy trình":"Thiết lập quy trình")</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div>
+        @if(viewOnly){<div class="deleted-notice">Quy trình này đã bị xóa@(model.DeletedAt.HasValue?$" lúc {model.DeletedAt.Value.ToLocalTime():dd/MM/yyyy HH:mm}":""). Bạn chỉ có thể xem thông tin.</div>}
+        <EditForm Model="model" OnValidSubmit="Save">
+            <fieldset disabled="@viewOnly">
+                <div class="form-grid"><label>Tên quy trình<input required @bind="model.Name" /></label><label>Loại cây trồng<input required @bind="model.CropType" /></label><label class="wide">Mô tả<input @bind="model.Description" /></label>
+                    <label class="wide">Nông trại áp dụng<div class="farm-picker"><select @bind="selectedFarmId"><option value="" disabled hidden>Chọn nông trại để thêm</option>@foreach(var farm in AvailableFarms){<option value="@farm.Id">@farm.Name</option>}</select><button type="button" class="btn small ghost" disabled="@(!selectedFarmId.HasValue)" @onclick="AddSelectedFarm">Thêm</button></div><div class="selected-farm-list">@if(model.FarmIds.Count==0){<small>Chưa chọn nông trại — quy trình được dùng chung.</small>}@foreach(var farm in SelectedFarms){<span class="selected-farm-chip">@farm.Name @if(!viewOnly){<button type="button" @onclick="()=>RemoveSelectedFarm(farm.Id)">×</button>}</span>}</div></label>
+                </div>
+                <div class="step-editor"><div class="panel-head"><h3>Các bước thực hiện</h3>@if(!viewOnly){<button type="button" class="btn small ghost" @onclick="AddStep">+ Thêm bước</button>}</div>
+                    @for(int i=0;i<model.Steps.Count;i++){var index=i;<div class="step-form editable"><b>@(i+1)</b><input required placeholder="Tên bước" @bind="model.Steps[index].Title"/><input type="number" placeholder="Ngày +" @bind="model.Steps[index].DayOffset"/><input placeholder="Mô tả công việc" @bind="model.Steps[index].Description"/>@if(!viewOnly){<button type="button" class="icon-btn step-remove" @onclick="()=>RemoveStep(index)">×</button>}</div>}
+                </div>
+            </fieldset>
+            <div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Đóng</button>@if(!viewOnly){<button class="btn primary">@(editingId.HasValue?"Lưu thay đổi":"Tạo quy trình")</button>}</div>
+        </EditForm>
+    </div></div>
+}
+
+@code {
+    List<WorkProcess> items=[];List<Farm> farms=[];WorkProcess model=NewModel();Guid? editingId;Guid? selectedFarmId;bool showForm;bool viewOnly;
+    IEnumerable<Farm> AvailableFarms=>farms.Where(x=>!model.FarmIds.Contains(x.Id));IEnumerable<Farm> SelectedFarms=>farms.Where(x=>model.FarmIds.Contains(x.Id));
+    protected override async Task OnInitializedAsync(){farms=await Api.Farms();await Reload();} async Task Reload()=>items=await Api.Processes();
+    void OpenCreate(){editingId=null;selectedFarmId=null;viewOnly=false;model=NewModel();showForm=true;}
+    void OpenProcess(WorkProcess process){editingId=process.IsDeleted?null:process.Id;selectedFarmId=null;viewOnly=process.IsDeleted;model=Copy(process);showForm=true;}
+    void CloseForm(){showForm=false;editingId=null;selectedFarmId=null;viewOnly=false;model=NewModel();}
+    void AddSelectedFarm(){if(selectedFarmId.HasValue&&!model.FarmIds.Contains(selectedFarmId.Value))model.FarmIds.Add(selectedFarmId.Value);selectedFarmId=null;}void RemoveSelectedFarm(Guid id)=>model.FarmIds.Remove(id);
+    void AddStep()=>model.Steps.Add(new());void RemoveStep(int index){if(model.Steps.Count>1)model.Steps.RemoveAt(index);}
+    async Task Save(){if(viewOnly)return;if(editingId.HasValue)await Api.UpdateProcess(editingId.Value,model);else await Api.AddProcess(model);await Reload();CloseForm();}
+    async Task Delete(WorkProcess process){if(!await JS.InvokeAsync<bool>("confirm",$"Bạn có chắc muốn xóa quy trình '{process.Name}'? Quy trình sẽ chuyển sang trạng thái đã xóa."))return;await Api.DeleteProcess(process.Id);await Reload();}
+    string AssignedFarmNames(WorkProcess p){if(p.FarmIds.Count==0)return "Dùng chung";var names=farms.Where(x=>p.FarmIds.Contains(x.Id)).Select(x=>x.Name).ToList();return names.Count==0?"Dùng chung":string.Join(", ",names);}
+    static WorkProcess NewModel()=>new(){Steps=[new ProcessStep()]};
+    static WorkProcess Copy(WorkProcess x)=>new(){Id=x.Id,Name=x.Name,CropType=x.CropType,Description=x.Description,FarmIds=[..x.FarmIds],IsDeleted=x.IsDeleted,DeletedAt=x.DeletedAt,Steps=x.Steps.OrderBy(s=>s.Order).Select(s=>new ProcessStep{Id=s.Id,Order=s.Order,Title=s.Title,Description=s.Description,DayOffset=s.DayOffset}).ToList()};
+}

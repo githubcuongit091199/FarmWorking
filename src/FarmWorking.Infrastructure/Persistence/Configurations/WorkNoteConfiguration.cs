@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class WorkNoteConfiguration:IEntityTypeConfiguration<WorkNote>{public void Configure(EntityTypeBuilder<WorkNote>b){b.ToTable("WorkNotes");b.HasKey(x=>x.Id);b.Property(x=>x.Title).HasMaxLength(250).IsRequired();b.Property(x=>x.Content).HasMaxLength(4000);b.Property(x=>x.Worker).HasMaxLength(150);b.HasOne(x=>x.Farm).WithMany(x=>x.WorkNotes).HasForeignKey(x=>x.FarmId).OnDelete(DeleteBehavior.Cascade);}}

@@ -1,0 +1,22 @@
+@page "/supplies/{Kind}"
+@inject FarmApi Api
+<PageTitle>@Title · Lá Farm</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">DANH MỤC VẬT TƯ</span><h1>@Title</h1><p>Danh mục dùng chung. Số lượng tồn được quản lý riêng tại từng nông trại.</p></div><button class="btn primary" @onclick="OpenForm">+ Thêm @Title.ToLower()</button></div>
+<div class="inventory-grid">
+@foreach(var item in Filtered){<article class="inventory-card">@if(!string.IsNullOrWhiteSpace(item.ImageUrl)){<img class="supply-image" src="@item.ImageUrl" alt="@item.Name" />}else{<div class="inventory-icon supply-placeholder">@(item.Type==SupplyType.Fertilizer?"◇":"⌁")</div>}<div class="grow"><span class="eyebrow">@item.Brand · @item.Unit</span><h2>@item.Name</h2><p>@item.Usage</p><a class="back-link" href="supply-prices">Quản lý bộ giá →</a></div></article>}
+</div>
+@if(showForm){<div class="modal-backdrop" @onclick="CloseForm"><div class="modal" @onclick:stopPropagation><div class="modal-head"><div><span class="eyebrow">VẬT TƯ MỚI</span><h2>Thêm @Title.ToLower()</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div><EditForm Model="model" OnValidSubmit="Save"><div class="form-grid"><label>Tên sản phẩm<input required @bind="model.Name"/></label><label>Thương hiệu<input @bind="model.Brand"/></label><div class="wide image-source-grid"><label>Chọn ảnh từ máy<InputFile OnChange="UploadImage" accept="image/jpeg,image/png,image/webp,image/gif"/><small>JPG, PNG, WEBP hoặc GIF; tối đa 5 MB.</small></label><span class="image-or">hoặc</span><label>URL hình ảnh<input type="url" @bind="model.ImageUrl" @bind:event="oninput" placeholder="https://.../hinh-san-pham.jpg"/><small>Dán đường dẫn trực tiếp đến ảnh sản phẩm.</small></label></div>@if(uploading){<div class="wide upload-status">Đang tải ảnh lên…</div>}@if(!string.IsNullOrWhiteSpace(uploadError)){<div class="wide upload-error">@uploadError</div>}@if(!string.IsNullOrWhiteSpace(model.ImageUrl)){<div class="wide supply-preview"><img src="@model.ImageUrl" alt="Xem trước ảnh" /></div>}<label>Đơn vị<input required @bind="model.Unit"/></label><label class="wide">Công dụng / cách dùng<input @bind="model.Usage"/></label><label class="wide">Ghi chú<textarea rows="3" @bind="model.Notes"></textarea></label></div><div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Hủy</button><button class="btn primary" disabled="@uploading">Lưu vật tư</button></div></EditForm></div></div>}
+@code {
+ [Parameter] public string Kind { get; set; } = "fertilizer";
+ List<Supply> items=[]; Supply model=new(); bool showForm; bool uploading; string uploadError="";
+ SupplyType Type=>Kind=="pesticide"?SupplyType.Pesticide:SupplyType.Fertilizer;
+ string Title=>Type==SupplyType.Fertilizer?"Phân bón":"Thuốc bảo vệ thực vật";
+ IEnumerable<Supply> Filtered=>items.Where(x=>x.Type==Type);
+ protected override async Task OnParametersSetAsync(){items=await Api.Supplies();model=NewSupply();}
+ void OpenForm(){model=NewSupply();uploadError="";showForm=true;}
+ void CloseForm(){showForm=false;model=NewSupply();uploadError="";}
+ Supply NewSupply()=>new(){Type=Type,Unit=Type==SupplyType.Fertilizer?"kg":"lít"};
+ async Task UploadImage(InputFileChangeEventArgs e){uploadError="";uploading=true;try{model.ImageUrl=await Api.UploadSupplyImage(e.File);}catch(Exception){uploadError="Không thể tải ảnh lên. Hãy chọn ảnh hợp lệ dưới 5 MB.";}finally{uploading=false;}}
+ async Task Save(){model.Type=Type;await Api.AddSupply(model);items=await Api.Supplies();CloseForm();}
+ static decimal StockPercent(Supply x)=>Math.Min(100,x.MinimumStock<=0?100:x.Quantity/x.MinimumStock*50);
+}

@@ -1,0 +1,3 @@
+using FarmWorking.Domain.Entities; using Microsoft.EntityFrameworkCore; using Microsoft.EntityFrameworkCore.Metadata.Builders;
+namespace FarmWorking.Infrastructure.Persistence.Configurations;
+public class WorkProcessConfiguration:IEntityTypeConfiguration<WorkProcess>{public void Configure(EntityTypeBuilder<WorkProcess>b){b.ToTable("WorkProcesses");b.HasKey(x=>x.Id);b.Property(x=>x.Name).HasMaxLength(250).IsRequired();b.Property(x=>x.CropType).HasMaxLength(150);b.Property(x=>x.Description).HasMaxLength(2000);b.HasIndex(x=>x.IsDeleted);b.HasMany(x=>x.Farms).WithMany(x=>x.WorkProcesses).UsingEntity(j=>j.ToTable("FarmWorkProcesses"));}}
