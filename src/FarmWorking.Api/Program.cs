@@ -3,6 +3,7 @@ using FarmWorking.Application.Services;
 using FarmWorking.Infrastructure.Persistence;
 using FarmWorking.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors();
-app.UseStaticFiles();
+var contentTypes = new FileExtensionContentTypeProvider();
+contentTypes.Mappings[".dat"] = "application/octet-stream";
+contentTypes.Mappings[".wasm"] = "application/wasm";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = contentTypes });
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 app.Run();
