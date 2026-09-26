@@ -19,7 +19,15 @@ public class SuppliesController(ISupplyService service, IWebHostEnvironment envi
     [HttpGet("{id:guid}")] public ActionResult<Supply> Get(Guid id) { var result = service.GetById(id); return result is null ? NotFound() : Ok(result.ToContract()); }
     [HttpPost] public async Task<ActionResult<Supply>> Create(Supply item, CancellationToken ct) { var result = (await service.CreateAsync(item.ToDomain(), ct)).ToContract(); return CreatedAtAction(nameof(Get), new { id = result.Id }, result); }
     [HttpPut("{id:guid}")] public async Task<ActionResult<Supply>> Update(Guid id, Supply item, CancellationToken ct) { var result = await service.UpdateAsync(id, item.ToDomain(), ct); return result is null ? NotFound() : Ok(result.ToContract()); }
-    [HttpDelete("{id:guid}")] public async Task<IActionResult> Delete(Guid id, CancellationToken ct) => await service.DeleteAsync(id, ct) ? NoContent() : NotFound();
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        if (await db.FarmSupplyEntries.AnyAsync(x => x.SupplyId == id || x.SupplyPrice.SupplyId == id, ct))
+            return Conflict("Vật tư đã có lịch sử nhập kho nên không thể xóa. Bạn vẫn có thể sửa thông tin vật tư.");
+
+        // SupplyPrices are deleted atomically by the cascading foreign key.
+        return await service.DeleteAsync(id, ct) ? NoContent() : NotFound();
+    }
 
     [HttpGet("{id:guid}/prices")]
     public async Task<ActionResult<IEnumerable<FarmWorking.Shared.SupplyPrice>>> Prices(Guid id,CancellationToken ct)=>Ok(await db.SupplyPrices.AsNoTracking().Where(x=>x.SupplyId==id).OrderByDescending(x=>x.CreatedAt).Select(x=>new FarmWorking.Shared.SupplyPrice{Id=x.Id,SupplyId=x.SupplyId,Price=x.Price,CreatedAt=x.CreatedAt}).ToListAsync(ct));

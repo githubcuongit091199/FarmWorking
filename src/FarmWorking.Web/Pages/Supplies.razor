@@ -3,20 +3,63 @@
 <PageTitle>@Title · Lá Farm</PageTitle>
 <div class="page-heading"><div><span class="eyebrow">DANH MỤC VẬT TƯ</span><h1>@Title</h1><p>Danh mục dùng chung. Số lượng tồn được quản lý riêng tại từng nông trại.</p></div><button class="btn primary" @onclick="OpenForm">+ Thêm @Title.ToLower()</button></div>
 <div class="inventory-grid">
-@foreach(var item in Filtered){<article class="inventory-card">@if(!string.IsNullOrWhiteSpace(item.ImageUrl)){<img class="supply-image" src="@item.ImageUrl" alt="@item.Name" />}else{<div class="inventory-icon supply-placeholder">@(item.Type==SupplyType.Fertilizer?"◇":"⌁")</div>}<div class="grow"><span class="eyebrow">@item.Brand · @item.Unit</span><h2>@item.Name</h2><p>@item.Usage</p><a class="back-link" href="supply-prices">Quản lý bộ giá →</a></div></article>}
+@foreach(var item in Filtered){<article class="inventory-card">@if(!string.IsNullOrWhiteSpace(item.ImageUrl)){<img class="supply-image" src="@item.ImageUrl" alt="@item.Name" />}else{<div class="inventory-icon supply-placeholder">@(item.Type==SupplyType.Fertilizer?"◇":"⌁")</div>}<div class="grow"><span class="eyebrow">@item.Brand · @item.Unit</span><h2>@item.Name</h2><p>@item.Usage</p><a class="back-link" href="supply-prices">Quản lý bộ giá →</a><div class="row-actions"><button class="btn small ghost" @onclick="()=>OpenEdit(item)">Sửa</button><button class="btn small danger" @onclick="()=>OpenDelete(item)">Xóa</button></div></div></article>}
 </div>
-@if(showForm){<div class="modal-backdrop" @onclick="CloseForm"><div class="modal" @onclick:stopPropagation><div class="modal-head"><div><span class="eyebrow">VẬT TƯ MỚI</span><h2>Thêm @Title.ToLower()</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div><EditForm Model="model" OnValidSubmit="Save"><div class="form-grid"><label>Tên sản phẩm<input required @bind="model.Name"/></label><label>Thương hiệu<input @bind="model.Brand"/></label><div class="wide image-source-grid"><label>Chọn ảnh từ máy<InputFile OnChange="UploadImage" accept="image/jpeg,image/png,image/webp,image/gif"/><small>JPG, PNG, WEBP hoặc GIF; tối đa 5 MB.</small></label><span class="image-or">hoặc</span><label>URL hình ảnh<input type="url" @bind="model.ImageUrl" @bind:event="oninput" placeholder="https://.../hinh-san-pham.jpg"/><small>Dán đường dẫn trực tiếp đến ảnh sản phẩm.</small></label></div>@if(uploading){<div class="wide upload-status">Đang tải ảnh lên…</div>}@if(!string.IsNullOrWhiteSpace(uploadError)){<div class="wide upload-error">@uploadError</div>}@if(!string.IsNullOrWhiteSpace(model.ImageUrl)){<div class="wide supply-preview"><img src="@model.ImageUrl" alt="Xem trước ảnh" /></div>}<label>Đơn vị<input required @bind="model.Unit"/></label><label class="wide">Công dụng / cách dùng<input @bind="model.Usage"/></label><label class="wide">Ghi chú<textarea rows="3" @bind="model.Notes"></textarea></label></div><div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Hủy</button><button class="btn primary" disabled="@uploading">Lưu vật tư</button></div></EditForm></div></div>}
+@if(showForm){<div class="modal-backdrop" @onclick="CloseForm"><div class="modal" @onclick:stopPropagation><div class="modal-head"><div><span class="eyebrow">@(editingId.HasValue?"CẬP NHẬT":"VẬT TƯ MỚI")</span><h2>@(editingId.HasValue?"Sửa":"Thêm") @Title.ToLower()</h2></div><button class="icon-btn" @onclick="CloseForm">×</button></div><EditForm Model="model" OnValidSubmit="Save"><div class="form-grid"><label>Tên sản phẩm<input required @bind="model.Name"/></label><label>Thương hiệu<input @bind="model.Brand"/></label><div class="wide image-source-grid"><label>Chọn ảnh từ máy<InputFile OnChange="UploadImage" accept="image/jpeg,image/png,image/webp,image/gif"/><small>JPG, PNG, WEBP hoặc GIF; tối đa 5 MB.</small></label><span class="image-or">hoặc</span><label>URL hình ảnh<input type="url" @bind="model.ImageUrl" @bind:event="oninput" placeholder="https://.../hinh-san-pham.jpg"/><small>Dán đường dẫn trực tiếp đến ảnh sản phẩm.</small></label></div>@if(uploading){<div class="wide upload-status">Đang tải ảnh lên…</div>}@if(!string.IsNullOrWhiteSpace(uploadError)){<div class="wide upload-error">@uploadError</div>}@if(!string.IsNullOrWhiteSpace(model.ImageUrl)){<div class="wide supply-preview"><img src="@model.ImageUrl" alt="Xem trước ảnh" /></div>}<label>Đơn vị<input required @bind="model.Unit"/></label><label class="wide">Công dụng / cách dùng<input @bind="model.Usage"/></label><label class="wide">Ghi chú<textarea rows="3" @bind="model.Notes"></textarea></label></div>@if(!string.IsNullOrWhiteSpace(formError)){<div class="upload-error form-error" role="alert">@formError</div>}<div class="modal-actions"><button type="button" class="btn ghost" @onclick="CloseForm">Hủy</button><button class="btn primary" disabled="@(uploading || saving)">@(saving?"Đang lưu…":"Lưu vật tư")</button></div></EditForm></div></div>}
+@if(deletingItem is not null)
+{
+ <div class="modal-backdrop" @onclick="CloseDelete"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-supply-title" @onclick:stopPropagation>
+  <div class="modal-head"><h2 id="delete-supply-title">Xóa vật tư</h2><button class="icon-btn" disabled="@deleting" @onclick="CloseDelete">×</button></div>
+  <p>Bạn có chắc muốn xóa <strong>@deletingItem.Name</strong>? Toàn bộ mức giá trong bộ giá của vật tư này cũng sẽ bị xóa. Thao tác này không thể hoàn tác.</p>
+  @if(!string.IsNullOrWhiteSpace(deleteError)){<div class="upload-error form-error" role="alert">@deleteError</div>}
+  <div class="modal-actions"><button class="btn ghost" disabled="@deleting" @onclick="CloseDelete">Hủy</button><button class="btn danger" disabled="@deleting" @onclick="Remove">@(deleting?"Đang xóa…":"Xóa vật tư và bộ giá")</button></div>
+ </div></div>
+}
 @code {
  [Parameter] public string Kind { get; set; } = "fertilizer";
- List<Supply> items=[]; Supply model=new(); bool showForm; bool uploading; string uploadError="";
+ List<Supply> items=[]; Supply model=new(); Guid? editingId; Supply? deletingItem;
+ bool showForm; bool uploading; bool saving; bool deleting;
+ string uploadError=""; string formError=""; string deleteError="";
  SupplyType Type=>Kind=="pesticide"?SupplyType.Pesticide:SupplyType.Fertilizer;
  string Title=>Type==SupplyType.Fertilizer?"Phân bón":"Thuốc bảo vệ thực vật";
  IEnumerable<Supply> Filtered=>items.Where(x=>x.Type==Type);
- protected override async Task OnParametersSetAsync(){items=await Api.Supplies();model=NewSupply();}
- void OpenForm(){model=NewSupply();uploadError="";showForm=true;}
- void CloseForm(){showForm=false;model=NewSupply();uploadError="";}
+ protected override async Task OnParametersSetAsync(){showForm=false;editingId=null;deletingItem=null;items=await Api.Supplies();model=NewSupply();}
+ void OpenForm(){editingId=null;model=NewSupply();uploadError="";formError="";showForm=true;}
+ void OpenEdit(Supply item)
+ {
+  editingId=item.Id;
+  model=new(){Id=item.Id,Type=item.Type,Name=item.Name,Brand=item.Brand,ImageUrl=item.ImageUrl,Unit=item.Unit,Usage=item.Usage,Notes=item.Notes,Quantity=item.Quantity,MinimumStock=item.MinimumStock,ExpiryDate=item.ExpiryDate};
+  uploadError="";formError="";showForm=true;
+ }
+ void CloseForm(){if(saving||uploading)return;showForm=false;editingId=null;model=NewSupply();uploadError="";formError="";}
+ void OpenDelete(Supply item){deletingItem=item;deleteError="";}
+ void CloseDelete(){if(deleting)return;deletingItem=null;deleteError="";}
  Supply NewSupply()=>new(){Type=Type,Unit=Type==SupplyType.Fertilizer?"kg":"lít"};
- async Task UploadImage(InputFileChangeEventArgs e){uploadError="";uploading=true;try{model.ImageUrl=await Api.UploadSupplyImage(e.File);}catch(Exception){uploadError="Không thể tải ảnh lên. Hãy chọn ảnh hợp lệ dưới 5 MB.";}finally{uploading=false;}}
- async Task Save(){model.Type=Type;await Api.AddSupply(model);items=await Api.Supplies();CloseForm();}
- static decimal StockPercent(Supply x)=>Math.Min(100,x.MinimumStock<=0?100:x.Quantity/x.MinimumStock*50);
+ async Task UploadImage(InputFileChangeEventArgs e){uploadError="";uploading=true;var target=model;try{target.ImageUrl=await Api.UploadSupplyImage(e.File);}catch(Exception){uploadError="Không thể tải ảnh lên. Hãy chọn ảnh hợp lệ dưới 5 MB.";}finally{uploading=false;}}
+ async Task Save()
+ {
+  if(saving||uploading)return;
+  saving=true;formError="";
+  try
+  {
+   if(editingId.HasValue)await Api.UpdateSupply(editingId.Value,model);else await Api.AddSupply(model);
+   items=await Api.Supplies();showForm=false;editingId=null;model=NewSupply();
+  }
+  catch(HttpRequestException){formError="Không thể lưu hoặc tải lại danh sách vật tư. Vui lòng kiểm tra và thử lại.";}
+  finally{saving=false;}
+ }
+ async Task Remove()
+ {
+  if(deleting||deletingItem is null)return;
+  deleting=true;deleteError="";
+  var id=deletingItem.Id;
+  try{await Api.DeleteSupply(id);items.RemoveAll(x=>x.Id==id);deletingItem=null;}
+  catch(HttpRequestException ex)
+  {
+   deleteError=ex.StatusCode==System.Net.HttpStatusCode.Conflict
+    ?"Vật tư đã có lịch sử nhập kho nên không thể xóa. Bạn vẫn có thể sửa thông tin vật tư."
+    :"Không thể xóa vật tư và bộ giá. Vui lòng thử lại.";
+  }
+  finally{deleting=false;}
+ }
 }
