@@ -62,6 +62,16 @@ else
     List<Worker> AssignableWorkers=>allWorkers.Where(x=>!x.FarmId.HasValue).OrderBy(x=>x.FullName).ToList();
     List<StockRow> Stocks=>farmSupplyEntries.GroupBy(x=>new{x.SupplyId,x.SupplyPriceId,x.SupplyName,x.SupplyType,x.Unit,x.UnitPrice}).Select(g=>new StockRow(g.Key.SupplyId,g.Key.SupplyPriceId,g.Key.SupplyName,g.Key.SupplyType,g.Key.Unit,g.Key.UnitPrice,g.Sum(x=>x.Quantity),g.Sum(x=>x.RemainingQuantity),g.Count())).OrderBy(x=>x.Name).ThenBy(x=>x.UnitPrice).ToList();
     protected override async Task OnParametersSetAsync(){detail=await Api.Farm(Id);allSupplies=await Api.Supplies();farmSupplyEntries=await Api.FarmSupplies(Id);allWorkers=await Api.Workers();payrolls=await Api.Payroll(Id);workTypes=await Api.WorkTypes();}
+    async Task RefreshFarmBalances()
+    {
+        var farmTask=Api.Farm(Id);
+        var suppliesTask=Api.FarmSupplies(Id);
+        var payrollTask=Api.Payroll(Id);
+        await Task.WhenAll(farmTask,suppliesTask,payrollTask);
+        detail=await farmTask;
+        farmSupplyEntries=await suppliesTask;
+        payrolls=await payrollTask;
+    }
     async Task SaveNote(){await Api.AddNote(Id,note);detail=await Api.Farm(Id);note=new();showNote=false;}
     List<FarmProcessExtraStep> ExtraSteps(Guid processId)=>detail?.ExtraSteps.Where(x=>x.WorkProcessId==processId).OrderBy(x=>x.Order).ToList()??[];
     void OpenExtraStep(WorkProcess process){selectedProcessId=process.Id;selectedProcessName=process.Name;extraStep=new(){FarmId=Id,WorkProcessId=process.Id};showExtraStep=true;}
@@ -78,7 +88,7 @@ else
     void OpenProvision(){provision=new(){ReceivedAt=DateTime.Today};selectedPrices=[];stockError="";showProvision=true;}
     void CloseProvision(){showProvision=false;stockError="";}
     async Task LoadSelectedPrices(){provision.SupplyPriceId=Guid.Empty;selectedPrices=provision.SupplyId==Guid.Empty?[]:await Api.SupplyPrices(provision.SupplyId);}
-    async Task SaveProvision(){if(provision.SupplyId==Guid.Empty||provision.SupplyPriceId==Guid.Empty){stockError="Vui lòng chọn vật tư và mức giá.";return;}try{await Api.ProvisionFarmSupply(Id,provision);farmSupplyEntries=await Api.FarmSupplies(Id);CloseProvision();}catch(HttpRequestException){stockError="Không thể nhập kho. Hãy kiểm tra số lượng và mức giá.";}}
+    async Task SaveProvision(){if(provision.SupplyId==Guid.Empty||provision.SupplyPriceId==Guid.Empty){stockError="Vui lòng chọn vật tư và mức giá.";return;}try{await Api.ProvisionFarmSupply(Id,provision);await RefreshFarmBalances();CloseProvision();}catch(HttpRequestException){stockError="Không thể nhập kho. Hãy kiểm tra số lượng và mức giá.";}}
     void OpenUse(StockRow stock){selectedStock=stock;useRequest=new(){SupplyId=stock.SupplyId,SupplyPriceId=stock.SupplyPriceId,UsedAt=DateTime.Today};stockError="";showUse=true;}
     void CloseUse(){showUse=false;selectedStock=null;stockError="";}
     async Task SaveUse(){if(string.IsNullOrWhiteSpace(useRequest.Worker)){stockError="Vui lòng nhập người thực hiện.";return;}try{await Api.UseFarmSupply(Id,useRequest);farmSupplyEntries=await Api.FarmSupplies(Id);detail=await Api.Farm(Id);CloseUse();}catch(HttpRequestException){stockError="Số lượng sử dụng không hợp lệ hoặc vượt quá tồn kho.";}}
@@ -96,7 +106,7 @@ else
     void OpenWorkDay(Worker worker){payrollWorker=worker;payrollDate=DateTime.Today;selectedWorkTypeId=Guid.Empty;workFraction=1;settlingPayroll=false;ValidatePayrollDate();showPayrollAction=true;}
     void OpenSettlement(Worker worker){payrollWorker=worker;payrollDate=DateTime.Today;settlingPayroll=true;payrollError="";showPayrollAction=true;}
     void ClosePayrollAction(){showPayrollAction=false;payrollWorker=null;payrollError="";}
-    async Task SavePayrollAction(){if(payrollWorker is null)return;if(!settlingPayroll&&selectedWorkTypeId==Guid.Empty){payrollError="Vui lòng chọn công việc.";return;}try{if(settlingPayroll){await Api.SettleWorkerPayroll(Id,payrollWorker.Id,payrollDate);detail=await Api.Farm(Id);}else await Api.AddWorkerWorkDay(Id,payrollWorker.Id,new(){WorkDate=payrollDate,WorkTypeId=selectedWorkTypeId,WorkFraction=workFraction});payrolls=await Api.Payroll(Id);ClosePayrollAction();}catch(HttpRequestException){payrollError=settlingPayroll?"Không có công chưa trả để tất toán.":"Không thể thêm: tổng công trong ngày không được vượt quá 1.";}}
+    async Task SavePayrollAction(){if(payrollWorker is null)return;if(!settlingPayroll&&selectedWorkTypeId==Guid.Empty){payrollError="Vui lòng chọn công việc.";return;}try{if(settlingPayroll){await Api.SettleWorkerPayroll(Id,payrollWorker.Id,payrollDate);await RefreshFarmBalances();}else {await Api.AddWorkerWorkDay(Id,payrollWorker.Id,new(){WorkDate=payrollDate,WorkTypeId=selectedWorkTypeId,WorkFraction=workFraction});payrolls=await Api.Payroll(Id);}ClosePayrollAction();}catch(HttpRequestException){payrollError=settlingPayroll?"Không có công chưa trả để tất toán.":"Không thể thêm: tổng công trong ngày không được vượt quá 1.";}}
     static Worker NewWorker()=>new(){StartDate=DateTime.Today,IsActive=true};
     record StockRow(Guid SupplyId,Guid SupplyPriceId,string Name,SupplyType Type,string Unit,decimal UnitPrice,decimal Received,decimal Remaining,int EntryCount);
 }
