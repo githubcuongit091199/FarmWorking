@@ -13,13 +13,17 @@
     <div><span>TAG KHOẢN CHI</span><strong class="money-out">@items.Count(x=>x.Type==TransactionType.Expense)</strong></div>
 </div>
 
-<section class="panel">
-    <div class="panel-head"><div><h2>Danh sách tag</h2><p>@Filtered.Count() tag</p></div><select class="filter" @bind="filter"><option value="all" hidden="@(filter=="all")">Tất cả</option><option value="income">Khoản thu</option><option value="expense">Khoản chi</option></select></div>
-    <div class="tag-grid">
-        @if(!Filtered.Any()){<div class="empty">Chưa có tag phù hợp.</div>}
+<section class="usage-panel">
+    <div class="usage-toolbar"><div><h2>Danh sách tag</h2><p>@Filtered.Count() tag</p></div><select class="filter" @bind="filter"><option value="all" hidden="@(filter=="all")">Tất cả</option><option value="income">Khoản thu</option><option value="expense">Khoản chi</option></select></div>
+    <div class="usage-list">
+        @if(!Filtered.Any()){<div class="usage-empty"><h3>Chưa có tag phù hợp.</h3></div>}
         @foreach(var tag in Filtered)
         {
-            <article class="tag-card"><div class="tag-card-head"><span class="transaction-symbol @(tag.Type==TransactionType.Income?"up":"down")">@(tag.Type==TransactionType.Income?"↗":"↘")</span><em class="tag">@(tag.Type==TransactionType.Income?"Khoản thu":"Khoản chi")</em></div><h3>@tag.Name</h3><div class="row-actions"><button class="btn small ghost" @onclick="()=>OpenEdit(tag)">Sửa</button><button class="btn small danger" @onclick="()=>Remove(tag.Id)">Xóa</button></div></article>
+            <article class="usage-card catalog-list-row" @key="tag.Id">
+                <span class="transaction-symbol @(tag.Type==TransactionType.Income?"up":"down")">@(tag.Type==TransactionType.Income?"↗":"↘")</span>
+                <div class="usage-main"><div class="usage-title"><div><span class="usage-type">TAG TÀI CHÍNH</span><h3>@tag.Name</h3></div></div><em class="tag">@(tag.Type==TransactionType.Income?"Khoản thu":"Khoản chi")</em></div>
+                <div class="row-actions catalog-list-actions"><button class="btn small ghost" @onclick="()=>OpenEdit(tag)">Sửa</button><button class="btn small danger" @onclick="()=>Remove(tag.Id)">Xóa</button></div>
+            </article>
         }
     </div>
 </section>

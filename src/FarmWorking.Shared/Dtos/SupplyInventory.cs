@@ -33,3 +33,20 @@ public class FarmSupplyEntry
     public DateTime ReceivedAt { get; set; }
     public decimal RemainingQuantity=>Quantity-UsedQuantity;
 }
+public class FarmSupplyUsage
+{
+    public Guid Id { get; set; }
+    public Guid FarmId { get; set; }
+    public string FarmName { get; set; } = string.Empty;
+    public Guid SupplyId { get; set; }
+    public Guid SupplyPriceId { get; set; }
+    public string SupplyName { get; set; } = string.Empty;
+    public SupplyType SupplyType { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public decimal UnitPrice { get; set; }
+    public decimal Quantity { get; set; }
+    public DateTime UsedAt { get; set; }
+    public string Worker { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+    public decimal ReferenceValue => Quantity * UnitPrice;
+}

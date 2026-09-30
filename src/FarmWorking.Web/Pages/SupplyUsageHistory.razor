@@ -1,0 +1,45 @@
+@page "/supply-usage"
+@inject FarmApi Api
+<PageTitle>Lịch sử sử dụng vật tư · Lá Farm</PageTitle>
+
+<div class="page-heading"><div><span class="eyebrow">VẬT TƯ NÔNG TRẠI</span><h1>Lịch sử sử dụng</h1><p>Theo dõi vật tư đã dùng tại từng nông trại. Các bản ghi này không phát sinh khoản chi mới.</p></div></div>
+
+<div class="usage-summary">
+    <article><span>LẦN SỬ DỤNG</span><strong>@Filtered.Count()</strong></article>
+    <article><span>NÔNG TRẠI</span><strong>@Filtered.Select(x=>x.FarmId).Distinct().Count()</strong></article>
+    <article><span>GIÁ TRỊ THAM CHIẾU</span><strong>@Money(Filtered.Sum(x=>x.ReferenceValue))</strong><small>Chi phí đã ghi lúc cung cấp</small></article>
+</div>
+
+<section class="usage-panel">
+    <div class="usage-toolbar"><div><h2>Hoạt động gần đây</h2><p>@Filtered.Count() lần sử dụng phù hợp</p></div><div class="usage-filters"><label class="usage-search"><span>⌕</span><input placeholder="Tìm vật tư, nông trại, người dùng..." @bind="search" @bind:event="oninput"/></label><select class="filter" @bind="farmFilter"><option value="all">Tất cả nông trại</option>@foreach(var farm in farms){<option value="@farm.Id">@farm.Name</option>}</select><select class="filter" @bind="typeFilter"><option value="all">Tất cả vật tư</option><option value="fertilizer">Phân bón</option><option value="pesticide">Thuốc</option></select></div></div>
+    @if(!Filtered.Any())
+    {
+        <div class="usage-empty"><div class="usage-empty-icon">◷</div><h3>Chưa có lịch sử sử dụng</h3><p>Ghi nhận sử dụng vật tư tại trang chi tiết nông trại, dữ liệu sẽ xuất hiện tại đây.</p><a class="btn primary small" href="farms">Đến danh sách nông trại</a></div>
+    }
+    else
+    {
+        <div class="usage-list">
+        @foreach(var item in Filtered)
+        {
+            <article class="usage-card">
+                <div class="usage-date"><strong>@item.UsedAt.ToString("dd")</strong><span>THÁNG @item.UsedAt.ToString("MM")</span><small>@item.UsedAt.ToString("yyyy")</small></div>
+                <div class="usage-kind @(item.SupplyType==SupplyType.Pesticide?"pesticide":"")">@(item.SupplyType==SupplyType.Fertilizer?"◇":"⌁")</div>
+                <div class="usage-main"><div class="usage-title"><div><span class="usage-type">@(item.SupplyType==SupplyType.Fertilizer?"PHÂN BÓN":"THUỐC BẢO VỆ THỰC VẬT")</span><h3>@item.SupplyName</h3></div><strong class="usage-quantity">@item.Quantity.ToString("N2") <small>@item.Unit</small></strong></div><div class="usage-meta"><a href="farms/@item.FarmId"><span>♧</span> @item.FarmName</a><span><b>♟</b> @item.Worker</span><span><b>₫</b> @Money2(item.UnitPrice)/@item.Unit</span></div>@if(!string.IsNullOrWhiteSpace(item.Notes)){<p class="usage-note"><span>Ghi chú</span>@item.Notes</p>}</div>
+            </article>
+        }
+        </div>
+    }
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name="farmId")] public Guid? FarmId { get; set; }
+    List<FarmSupplyUsage> items=[];
+    List<Farm> farms=[];
+    string farmFilter="all";
+    string typeFilter="all";
+    string search="";
+    IEnumerable<FarmSupplyUsage> Filtered=>items.Where(x=>(farmFilter=="all"||x.FarmId.ToString()==farmFilter)&&(typeFilter=="all"||(typeFilter=="fertilizer"&&x.SupplyType==SupplyType.Fertilizer)||(typeFilter=="pesticide"&&x.SupplyType==SupplyType.Pesticide))&&(string.IsNullOrWhiteSpace(search)||x.SupplyName.Contains(search,StringComparison.OrdinalIgnoreCase)||x.FarmName.Contains(search,StringComparison.OrdinalIgnoreCase)||x.Worker.Contains(search,StringComparison.OrdinalIgnoreCase)||x.Notes.Contains(search,StringComparison.OrdinalIgnoreCase)));
+    protected override async Task OnInitializedAsync(){farms=await Api.Farms();items=await Api.SupplyUsages();farmFilter=FarmId?.ToString()??"all";}
+    static string Money(decimal value)=>value.ToString("N0",new CultureInfo("vi-VN"))+" ₫";
+    static string Money2(decimal value)=>value.ToString("N2",new CultureInfo("vi-VN"))+" đ";
+}

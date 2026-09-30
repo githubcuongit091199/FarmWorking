@@ -3,22 +3,28 @@
 @inject IJSRuntime JS
 <PageTitle>Quy trình · Lá Farm</PageTitle>
 <div class="page-heading"><div><span class="eyebrow">CANH TÁC</span><h1>Quy trình làm việc</h1><p>Click vào quy trình để xem hoặc cập nhật thông tin.</p></div><button class="btn primary" @onclick="OpenCreate">+ Tạo quy trình</button></div>
-<div class="process-grid">
+<section class="usage-panel">
+    <div class="usage-toolbar"><div><h2>Danh sách quy trình</h2><p>@items.Count quy trình</p></div></div>
+    <div class="usage-list">
+    @if(items.Count==0){<div class="usage-empty"><div class="usage-empty-icon">☷</div><h3>Chưa có quy trình</h3><p>Tạo quy trình để quản lý các bước thực hiện và nông trại áp dụng.</p></div>}
     @foreach(var process in items)
     {
-        <article class="process-card clickable @(process.IsDeleted?"deleted-process":"")" @onclick="()=>OpenProcess(process)">
-            @if(process.IsDeleted){<div class="deleted-slash"></div><span class="deleted-badge">ĐÃ XÓA</span>}
-            <div class="process-top"><span class="process-icon">☷</span><span class="steps-count">@process.Steps.Count bước</span></div>
-            @if(!process.IsDeleted){<button class="process-delete-button" title="Xóa quy trình" @onclick:stopPropagation @onclick="()=>Delete(process)">Xóa</button>}
-            <span class="eyebrow">@process.CropType</span><h2>@process.Name</h2><p>@process.Description</p>
-            <div class="assigned-farms"><small>NÔNG TRẠI ÁP DỤNG</small><strong>@AssignedFarmNames(process)</strong></div>
-            <div class="mini-steps">@foreach(var step in process.Steps.OrderBy(x=>x.Order).Take(3)){<div><b>@step.Order</b><span>@step.Title<small>Ngày +@step.DayOffset</small></span></div>}</div>
-            @if(!process.IsDeleted){<div class="process-actions"><span class="click-hint">Click để sửa</span></div>}
-            else{<div class="process-actions"><span class="click-hint">Click để xem chi tiết</span></div>}
+        <article class="usage-card catalog-list-row process-list-row @(process.IsDeleted?"deleted-process":"")" @key="process.Id" @onclick="()=>OpenProcess(process)">
+            <div class="catalog-list-image catalog-list-placeholder">☷</div>
+            <div class="usage-main">
+                <div class="usage-title"><div><span class="usage-type">@process.CropType</span><h3>@process.Name</h3></div>@if(process.IsDeleted){<span class="process-list-deleted">ĐÃ XÓA</span>}</div>
+                <div class="usage-meta"><span>@process.Steps.Count bước</span><span>Nông trại áp dụng: @AssignedFarmNames(process)</span></div>
+                @if(!string.IsNullOrWhiteSpace(process.Description)){<p class="usage-note">@process.Description</p>}
+                <div class="mini-steps process-list-steps">@foreach(var step in process.Steps.OrderBy(x=>x.Order).Take(3)){<div><b>@step.Order</b><span>@step.Title<small>Ngày +@step.DayOffset</small></span></div>}</div>
+            </div>
+            <div class="row-actions catalog-list-actions" @onclick:stopPropagation>
+                <button class="btn small ghost" @onclick="()=>OpenProcess(process)">@(process.IsDeleted?"Xem chi tiết":"Sửa")</button>
+                @if(!process.IsDeleted){<button class="btn small danger" title="Xóa quy trình" @onclick="()=>Delete(process)">Xóa</button>}
+            </div>
         </article>
     }
-</div>
-
+    </div>
+</section>
 @if(showForm)
 {
     <div class="modal-backdrop" @onclick="CloseForm"><div class="modal large" @onclick:stopPropagation>

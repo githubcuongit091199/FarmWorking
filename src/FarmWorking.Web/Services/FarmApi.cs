@@ -58,6 +58,7 @@ public class FarmApi(HttpClient http)
     public async Task AddSupplyPrice(Guid supplyId,decimal price){var response=await http.PostAsJsonAsync($"api/supplies/{supplyId}/prices",new AddSupplyPriceRequest{Price=price});response.EnsureSuccessStatusCode();}
     public async Task DeleteSupplyPrice(Guid id){var response=await http.DeleteAsync($"api/supplies/prices/{id}");response.EnsureSuccessStatusCode();}
     public async Task<List<FarmSupplyEntry>> FarmSupplies(Guid farmId)=>await http.GetFromJsonAsync<List<FarmSupplyEntry>>($"api/farms/{farmId}/supplies")??[];
+    public async Task<List<FarmSupplyUsage>> SupplyUsages(Guid? farmId=null)=>await http.GetFromJsonAsync<List<FarmSupplyUsage>>(farmId.HasValue?$"api/farms/supply-usages?farmId={farmId}":"api/farms/supply-usages")??[];
     public async Task ProvisionFarmSupply(Guid farmId,ProvisionFarmSupplyRequest item){var response=await http.PostAsJsonAsync($"api/farms/{farmId}/supplies",item);response.EnsureSuccessStatusCode();}
     public async Task UseFarmSupply(Guid farmId,UseFarmSupplyRequest item){var response=await http.PostAsJsonAsync($"api/farms/{farmId}/supplies/use",item);response.EnsureSuccessStatusCode();}
     public async Task<List<Worker>> Workers() => await http.GetFromJsonAsync<List<Worker>>("api/workers") ?? [];

@@ -18,6 +18,7 @@ public class FarmDbContext(DbContextOptions<FarmDbContext> options) : DbContext(
     public DbSet<Supply> Supplies => Set<Supply>();
     public DbSet<SupplyPrice> SupplyPrices => Set<SupplyPrice>();
     public DbSet<FarmSupplyEntry> FarmSupplyEntries => Set<FarmSupplyEntry>();
+    public DbSet<FarmSupplyUsage> FarmSupplyUsages => Set<FarmSupplyUsage>();
     public DbSet<Worker> Workers => Set<Worker>();
     public DbSet<WorkerWorkDay> WorkerWorkDays => Set<WorkerWorkDay>();
     public DbSet<WorkType> WorkTypes => Set<WorkType>();

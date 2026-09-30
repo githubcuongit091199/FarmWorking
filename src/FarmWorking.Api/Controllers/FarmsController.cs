@@ -27,12 +27,26 @@ public class FarmsController(IFarmService service, FarmDbContext db) : Controlle
     [HttpGet("{id:guid}/supplies")]
     public async Task<ActionResult<IEnumerable<FarmWorking.Shared.FarmSupplyEntry>>> Supplies(Guid id,CancellationToken ct)=>Ok(await db.FarmSupplyEntries.AsNoTracking().Where(x=>x.FarmId==id).Include(x=>x.Supply).OrderByDescending(x=>x.ReceivedAt).Select(x=>new FarmWorking.Shared.FarmSupplyEntry{Id=x.Id,FarmId=x.FarmId,SupplyId=x.SupplyId,SupplyPriceId=x.SupplyPriceId,SupplyName=x.Supply.Name,SupplyType=(SupplyType)x.Supply.Type,Unit=x.Supply.Unit,UnitPrice=x.UnitPrice,Quantity=x.Quantity,UsedQuantity=x.UsedQuantity,ReceivedAt=x.ReceivedAt}).ToListAsync(ct));
 
+    [HttpGet("supply-usages")]
+    public async Task<ActionResult<IEnumerable<FarmWorking.Shared.FarmSupplyUsage>>> SupplyUsages([FromQuery]Guid? farmId,CancellationToken ct)
+    {
+        var query=db.FarmSupplyUsages.AsNoTracking().AsQueryable();
+        if(farmId.HasValue)query=query.Where(x=>x.FarmId==farmId.Value);
+        return Ok(await query.OrderByDescending(x=>x.UsedAt).ThenByDescending(x=>x.Id).Select(x=>new FarmWorking.Shared.FarmSupplyUsage{Id=x.Id,FarmId=x.FarmId,FarmName=x.Farm.Name,SupplyId=x.SupplyId,SupplyPriceId=x.SupplyPriceId,SupplyName=x.Supply.Name,SupplyType=(SupplyType)x.Supply.Type,Unit=x.Supply.Unit,UnitPrice=x.UnitPrice,Quantity=x.Quantity,UsedAt=x.UsedAt,Worker=x.Worker,Notes=x.Notes}).ToListAsync(ct));
+    }
+
     [HttpPost("{id:guid}/supplies")]
     public async Task<IActionResult> ProvisionSupply(Guid id,ProvisionFarmSupplyRequest request,CancellationToken ct)
     {
         if(request.Quantity<=0)return BadRequest("Số lượng nhập phải lớn hơn 0.");if(!await db.Farms.AnyAsync(x=>x.Id==id,ct))return NotFound();
-        var price=await db.SupplyPrices.FirstOrDefaultAsync(x=>x.Id==request.SupplyPriceId&&x.SupplyId==request.SupplyId,ct);if(price is null)return BadRequest("Mức giá không thuộc vật tư đã chọn.");
-        db.FarmSupplyEntries.Add(new FarmWorking.Domain.Entities.FarmSupplyEntry{FarmId=id,SupplyId=request.SupplyId,SupplyPriceId=price.Id,UnitPrice=price.Price,Quantity=request.Quantity,ReceivedAt=request.ReceivedAt.Date});await db.SaveChangesAsync(ct);return Ok();
+        var price=await db.SupplyPrices.Include(x=>x.Supply).FirstOrDefaultAsync(x=>x.Id==request.SupplyPriceId&&x.SupplyId==request.SupplyId,ct);if(price is null)return BadRequest("Mức giá không thuộc vật tư đã chọn.");
+        var receivedAt=(request.ReceivedAt==default?DateTime.Today:request.ReceivedAt).Date;
+        var totalCost=Math.Round(request.Quantity*price.Price,2,MidpointRounding.AwayFromZero);
+        await using var transaction=await db.Database.BeginTransactionAsync(ct);
+        var expense=new FarmWorking.Domain.Entities.FarmTransaction{FarmId=id,Type=FarmWorking.Domain.Enums.TransactionType.Expense,Amount=totalCost,TransactionDate=receivedAt,Tag="Vật tư",Description=$"Cung cấp {price.Supply.Name}: {request.Quantity:N2} {price.Supply.Unit} × {price.Price:N2} đ"};
+        db.FarmTransactions.Add(expense);
+        db.FarmSupplyEntries.Add(new FarmWorking.Domain.Entities.FarmSupplyEntry{FarmId=id,SupplyId=request.SupplyId,SupplyPriceId=price.Id,ExpenseTransactionId=expense.Id,UnitPrice=price.Price,Quantity=request.Quantity,ReceivedAt=receivedAt});
+        await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);return Ok(new{cost=totalCost});
     }
 
     [HttpPost("{id:guid}/supplies/use")]
@@ -43,19 +57,17 @@ public class FarmsController(IFarmService service, FarmDbContext db) : Controlle
         var entries=await db.FarmSupplyEntries.Where(x=>x.FarmId==id&&x.SupplyId==request.SupplyId&&x.SupplyPriceId==request.SupplyPriceId&&x.Quantity>x.UsedQuantity).OrderBy(x=>x.ReceivedAt).ThenBy(x=>x.Id).ToListAsync(ct);
         if(entries.Sum(x=>x.Quantity-x.UsedQuantity)<request.Quantity)return BadRequest("Số lượng sử dụng vượt quá tồn kho của trại.");
         await using var transaction=await db.Database.BeginTransactionAsync(ct);
-        var remaining=request.Quantity;decimal totalCost=0;
-        foreach(var entry in entries){var take=Math.Min(remaining,entry.Quantity-entry.UsedQuantity);entry.UsedQuantity+=take;totalCost+=take*entry.UnitPrice;remaining-=take;if(remaining==0)break;}
-        totalCost=Math.Round(totalCost,2,MidpointRounding.AwayFromZero);
+        var remaining=request.Quantity;decimal referenceValue=0;
+        foreach(var entry in entries){var take=Math.Min(remaining,entry.Quantity-entry.UsedQuantity);entry.UsedQuantity+=take;referenceValue+=take*entry.UnitPrice;remaining-=take;if(remaining==0)break;}
+        referenceValue=Math.Round(referenceValue,2,MidpointRounding.AwayFromZero);
         var usedAt=request.UsedAt==default?DateTime.Today:request.UsedAt.Date;
         var selectedPrice=entries.First().UnitPrice;
-        var detail=$"Sử dụng {request.Quantity:N2} {supply.Unit} {supply.Name}, mức giá {selectedPrice:N2} đ/{supply.Unit}. Chi phí vật tư: {totalCost:N2} đ."+(string.IsNullOrWhiteSpace(request.Notes)?string.Empty:$" {request.Notes.Trim()}");
-        db.WorkNotes.Add(new FarmWorking.Domain.Entities.WorkNote{FarmId=id,WorkDate=usedAt,Title=$"Sử dụng vật tư: {supply.Name}",Content=detail,Worker=string.IsNullOrWhiteSpace(request.Worker)?"Không ghi nhận":request.Worker.Trim()});
-        db.FarmTransactions.Add(new FarmWorking.Domain.Entities.FarmTransaction{FarmId=id,Type=FarmWorking.Domain.Enums.TransactionType.Expense,Amount=totalCost,TransactionDate=usedAt,Tag="Vật tư",Description=$"{supply.Name}: {request.Quantity:N2} {supply.Unit} × {selectedPrice:N2} đ"});
-        await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);return Ok(new{cost=totalCost});
+        db.FarmSupplyUsages.Add(new FarmWorking.Domain.Entities.FarmSupplyUsage{FarmId=id,SupplyId=request.SupplyId,SupplyPriceId=request.SupplyPriceId,UnitPrice=selectedPrice,Quantity=request.Quantity,UsedAt=usedAt,Worker=string.IsNullOrWhiteSpace(request.Worker)?"Không ghi nhận":request.Worker.Trim(),Notes=request.Notes?.Trim()??string.Empty});
+        await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);return Ok(new{referenceValue});
     }
 
     [HttpDelete("{id:guid}/supplies/{entryId:guid}")]
-    public async Task<IActionResult> DeleteSupplyEntry(Guid id,Guid entryId,CancellationToken ct){var x=await db.FarmSupplyEntries.FirstOrDefaultAsync(e=>e.Id==entryId&&e.FarmId==id,ct);if(x is null)return NotFound();if(x.UsedQuantity>0)return BadRequest("Lô vật tư đã được sử dụng nên không thể xóa.");db.FarmSupplyEntries.Remove(x);await db.SaveChangesAsync(ct);return NoContent();}
+    public async Task<IActionResult> DeleteSupplyEntry(Guid id,Guid entryId,CancellationToken ct){var x=await db.FarmSupplyEntries.FirstOrDefaultAsync(e=>e.Id==entryId&&e.FarmId==id,ct);if(x is null)return NotFound();if(x.UsedQuantity>0)return BadRequest("Lô vật tư đã được sử dụng nên không thể xóa.");var expense=x.ExpenseTransactionId.HasValue?await db.FarmTransactions.FindAsync([x.ExpenseTransactionId.Value],ct):null;db.FarmSupplyEntries.Remove(x);if(expense is not null)db.FarmTransactions.Remove(expense);await db.SaveChangesAsync(ct);return NoContent();}
 
     [HttpGet("{id:guid}/payroll")]
     public async Task<ActionResult<IEnumerable<WorkerPayroll>>> Payroll(Guid id,CancellationToken ct)

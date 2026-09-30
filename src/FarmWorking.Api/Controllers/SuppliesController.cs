@@ -22,7 +22,7 @@ public class SuppliesController(ISupplyService service, IWebHostEnvironment envi
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        if (await db.FarmSupplyEntries.AnyAsync(x => x.SupplyId == id || x.SupplyPrice.SupplyId == id, ct))
+        if (await db.FarmSupplyEntries.AnyAsync(x => x.SupplyId == id || x.SupplyPrice.SupplyId == id, ct) || await db.FarmSupplyUsages.AnyAsync(x=>x.SupplyId==id,ct))
             return Conflict("Vật tư đã có lịch sử nhập kho nên không thể xóa. Bạn vẫn có thể sửa thông tin vật tư.");
 
         // SupplyPrices are deleted atomically by the cascading foreign key.
@@ -41,7 +41,7 @@ public class SuppliesController(ISupplyService service, IWebHostEnvironment envi
     }
 
     [HttpDelete("prices/{priceId:guid}")]
-    public async Task<IActionResult> DeletePrice(Guid priceId,CancellationToken ct){var x=await db.SupplyPrices.FindAsync([priceId],ct);if(x is null)return NotFound();if(await db.FarmSupplyEntries.AnyAsync(e=>e.SupplyPriceId==priceId,ct))return BadRequest("Mức giá đã được dùng trong lịch sử nhập kho nên không thể xóa.");db.SupplyPrices.Remove(x);await db.SaveChangesAsync(ct);return NoContent();}
+    public async Task<IActionResult> DeletePrice(Guid priceId,CancellationToken ct){var x=await db.SupplyPrices.FindAsync([priceId],ct);if(x is null)return NotFound();if(await db.FarmSupplyEntries.AnyAsync(e=>e.SupplyPriceId==priceId,ct)||await db.FarmSupplyUsages.AnyAsync(e=>e.SupplyPriceId==priceId,ct))return BadRequest("Mức giá đã được dùng trong lịch sử nhập kho hoặc sử dụng nên không thể xóa.");db.SupplyPrices.Remove(x);await db.SaveChangesAsync(ct);return NoContent();}
 
 
     [HttpPost("image")]
